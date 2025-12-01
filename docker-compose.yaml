@@ -1,59 +1,87 @@
-services:
-  postgres:
-    container_name: postgres_container
-    image: postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: jobapp   # Database name to match your Spring Boot application
-      PGDATA: /data/postgres
-    volumes:
-      - postgres:/data/postgres
-    ports:
-      - "5432:5432"
-    networks:
-      - postgres_network
-    restart: unless-stopped
+#services:
+#  postgres:
+#    container_name: postgres_container
+#    image: postgres
+#    environment:
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: admin
+#      POSTGRES_DB: jobapp   # Database name to match your Spring Boot application
+#      PGDATA: /data/postgres
+#    volumes:
+#      - postgres:/data/postgres
+#    ports:
+#      - "5432:5432"
+#    networks:
+#      - postgres_network
+#    restart: unless-stopped
+#
+#  pgadmin:
+#    container_name: pgadmin_container
+#    image: dpage/pgadmin4
+#    environment:
+#      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.com}
+#      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+#      PGADMIN_CONFIG_SERVER_MODE: 'False'
+#    volumes:
+#      - pgadmin:/var/lib/pgadmin
+#    ports:
+#      - "5050:80"
+#    networks:
+#      - postgres_network
+#    restart: unless-stopped
+#
+#  zipkin:
+#    image: openzipkin/zipkin
+#    container_name: zipkin
+#    ports:
+#      - "9411:9411"
+#    networks:
+#      - postgres_network
+#
+#  rabbitmq:
+#    container_name: rabbitmq_container
+#    image: rabbitmq:3-management  # Includes RabbitMQ Management Plugin
+#    ports:
+#      - "5672:5672" # RabbitMQ main port
+#      - "15672:15672" # RabbitMQ Management UI
+#    networks:
+#      - postgres_network
+#
+#
+#
+#
+#volumes:
+#  postgres:
+#  pgadmin:
+#
+#networks:
+#  postgres_network:
+#    driver: bridge
 
-  pgadmin:
-    container_name: pgadmin_container
-    image: dpage/pgadmin4
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    volumes:
-      - pgadmin:/var/lib/pgadmin
-    ports:
-      - "5050:80"
-    networks:
-      - postgres_network
-    restart: unless-stopped
-
-  zipkin:
-    image: openzipkin/zipkin
-    container_name: zipkin
-    ports:
-      - "9411:9411"
-    networks:
-      - postgres_network
-
-  rabbitmq:
-    container_name: rabbitmq_container
-    image: rabbitmq:3-management  # Includes RabbitMQ Management Plugin
-    ports:
-      - "5672:5672" # RabbitMQ main port
-      - "15672:15672" # RabbitMQ Management UI
-    networks:
-      - postgres_network
 
 
-
-
-volumes:
-  postgres:
-  pgadmin:
-
-networks:
-  postgres_network:
-    driver: bridge
+# Use a lightweight JDK base image
+FROM eclipse-temurin:17-jdk-alpine
+  
+  # Set working directory
+WORKDIR /app
+  
+  # Copy the Spring Boot jar (built with Maven/Gradle)
+ARG JAR_FILE=target/*.jar
+COPY ${JAR_FILE} app.jar
+  
+  # Expose the port Spring Boot listens on
+EXPOSE 8081
+  
+  # Set environment variables defaults (can be overridden in Azure)
+ENV SPRING_DATASOURCE_URL=jdbc:postgresql://<POSTGRES_HOST>:5432/company
+ENV SPRING_DATASOURCE_USERNAME=postgres
+ENV SPRING_DATASOURCE_PASSWORD=admin
+ENV EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://<EUREKA_HOST>:8761/eureka
+ENV SPRING_RABBITMQ_HOST=<RABBITMQ_HOST>
+ENV SPRING_RABBITMQ_USERNAME=guest
+ENV SPRING_RABBITMQ_PASSWORD=guest
+ENV SPRING_ZIPKIN_BASEURL=http://<ZIPKIN_HOST>:9411
+  
+  # Run the Spring Boot app
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
